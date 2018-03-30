@@ -42,6 +42,9 @@ exports.createPages = ({ graphql, boundActionCreators }) => {
         reject(result.errors)
       }
 
+      let tags = []
+      let categories = []
+
       _.each(result.data.allMarkdownRemark.edges, edge => {
         if (_.get(edge, 'node.frontmatter.layout') === 'page') {
           createPage({
@@ -56,36 +59,38 @@ exports.createPages = ({ graphql, boundActionCreators }) => {
             context: { slug: edge.node.fields.slug },
           })
 
-          let tags = []
+          // Add the tags from this page to our global list of tags
           if (_.get(edge, 'node.frontmatter.tags')) {
             tags = tags.concat(edge.node.frontmatter.tags)
           }
 
-          tags = _.uniq(tags)
-          _.each(tags, tag => {
-            const tagPath = `/tags/${_.kebabCase(tag)}/`
-            createPage({
-              path: tagPath,
-              component: tagTemplate,
-              context: { tag },
-            })
-          })
-
-          let categories = []
+          // Add the category from this page to our global list of categories
           if (_.get(edge, 'node.frontmatter.category')) {
             categories = categories.concat(edge.node.frontmatter.category)
           }
-
-          categories = _.uniq(categories)
-          _.each(categories, category => {
-            const categoryPath = `/categories/${_.kebabCase(category)}/`
-            createPage({
-              path: categoryPath,
-              component: categoryTemplate,
-              context: { category },
-            })
-          })
         }
+      })
+
+      // Create a page for each tag
+      tags = _.uniq(tags)
+      _.each(tags, tag => {
+        const tagPath = `/tags/${_.kebabCase(tag)}/`
+        createPage({
+          path: tagPath,
+          component: tagTemplate,
+          context: { tag },
+        })
+      })
+
+      // Create a page for each category
+      categories = _.uniq(categories)
+      _.each(categories, category => {
+        const categoryPath = `/categories/${_.kebabCase(category)}/`
+        createPage({
+          path: categoryPath,
+          component: categoryTemplate,
+          context: { category },
+        })
       })
 
       resolve()
@@ -129,4 +134,39 @@ exports.onCreateNode = ({ node, boundActionCreators, getNode }) => {
       createNodeField({ node, name: 'categorySlug', value: categorySlug })
     }
   }
+}
+
+exports.modifyWebpackConfig = ({ config }) => {
+  config.merge({
+    postcss: [
+      lost(),
+      pxtorem({
+        rootValue: 16,
+        unitPrecision: 5,
+        propList: [
+          'font',
+          'font-size',
+          'line-height',
+          'letter-spacing',
+          'margin',
+          'margin-top',
+          'margin-left',
+          'margin-bottom',
+          'margin-right',
+          'padding',
+          'padding-top',
+          'padding-left',
+          'padding-bottom',
+          'padding-right',
+          'border-radius',
+          'width',
+          'max-width',
+        ],
+        selectorBlackList: [],
+        replace: true,
+        mediaQuery: false,
+        minPixelValue: 0,
+      }),
+    ],
+  })
 }
